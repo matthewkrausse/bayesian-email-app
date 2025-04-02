@@ -2,10 +2,13 @@ import streamlit as st
 import math
 from statsmodels.stats.power import NormalIndPower
 from statsmodels.stats.proportion import proportion_effectsize
-import pandas as pd # Using pandas for better display of inputs
+import pandas as pd  # Using pandas for better display of inputs
+
 
 # --- Updated Calculation Function ---
-def calculate_sample_size(baseline_rate, mde, alpha, power, num_groups=2, alternative='two-sided'):
+def calculate_sample_size(
+    baseline_rate, mde, alpha, power, num_groups=2, alternative="two-sided"
+):
     """
     Calculates the required sample size per group for an A/B/.../N test
     comparing multiple proportions against a control, using Bonferroni correction.
@@ -32,7 +35,9 @@ def calculate_sample_size(baseline_rate, mde, alpha, power, num_groups=2, altern
     if mde <= 0:
         raise ValueError("Minimum Detectable Effect (MDE) must be positive.")
     if not 0 < alpha < 1:
-        raise ValueError("Overall Alpha (significance level) must be strictly between 0 and 1.")
+        raise ValueError(
+            "Overall Alpha (significance level) must be strictly between 0 and 1."
+        )
     if not 0 < power < 1:
         raise ValueError("Power must be strictly between 0 and 1.")
     if not isinstance(num_groups, int) or num_groups < 2:
@@ -48,27 +53,33 @@ def calculate_sample_size(baseline_rate, mde, alpha, power, num_groups=2, altern
             "Adjust baseline rate or MDE."
         )
 
-    if alternative not in ['two-sided', 'larger', 'smaller']:
+    if alternative not in ["two-sided", "larger", "smaller"]:
         raise ValueError("Alternative must be 'two-sided', 'larger', or 'smaller'.")
 
     # --- Bonferroni Correction ---
     # Assuming k-1 comparisons against the control for k groups
     num_comparisons = num_groups - 1
-    if num_comparisons < 1: # Should be caught by num_groups check, but belt-and-suspenders
+    if (
+        num_comparisons < 1
+    ):  # Should be caught by num_groups check, but belt-and-suspenders
         adjusted_alpha = alpha
     else:
         adjusted_alpha = alpha / num_comparisons
-        if adjusted_alpha >= alpha: # Sanity check
-            adjusted_alpha = alpha # Should only happen if num_comparisons is 1
+        if adjusted_alpha >= alpha:  # Sanity check
+            adjusted_alpha = alpha  # Should only happen if num_comparisons is 1
 
     if adjusted_alpha <= 0:
-         raise ValueError(f"Adjusted alpha ({adjusted_alpha:.2e}) is too low. Check overall alpha and number of groups.")
+        raise ValueError(
+            f"Adjusted alpha ({adjusted_alpha:.2e}) is too low. Check overall alpha and number of groups."
+        )
 
     # Calculate effect size using Cohen's h
     try:
         effect_size = proportion_effectsize(p1, p2)
     except ValueError as e:
-        raise ValueError(f"Could not calculate effect size. Check inputs. Original error: {e}")
+        raise ValueError(
+            f"Could not calculate effect size. Check inputs. Original error: {e}"
+        )
 
     # Initialize the power analysis class
     analysis = NormalIndPower()
@@ -77,17 +88,20 @@ def calculate_sample_size(baseline_rate, mde, alpha, power, num_groups=2, altern
     try:
         sample_size_float = analysis.solve_power(
             effect_size=abs(effect_size),
-            alpha=adjusted_alpha, # Use adjusted alpha here
+            alpha=adjusted_alpha,  # Use adjusted alpha here
             power=power,
             ratio=1.0,
-            alternative=alternative
+            alternative=alternative,
         )
     except Exception as e:
-         raise RuntimeError(f"Statsmodels power calculation failed. Check inputs. Original error: {e}")
+        raise RuntimeError(
+            f"Statsmodels power calculation failed. Check inputs. Original error: {e}"
+        )
 
     # Return sample size rounded up, target rate, and adjusted alpha
     sample_size_int = math.ceil(sample_size_float)
     return sample_size_int, p2, adjusted_alpha
+
 
 # --- Streamlit App Layout ---
 
@@ -118,37 +132,53 @@ num_groups = st.sidebar.number_input(
     min_value=2,
     value=2,
     step=1,
-    help="Total number of versions being tested, including the control (e.g., 3 for A/B/C test)."
+    help="Total number of versions being tested, including the control (e.g., 3 for A/B/C test).",
 )
 
 baseline_rate = st.sidebar.number_input(
     label="Baseline Conversion Rate (p1)",
-    min_value=0.0001, max_value=0.9999, value=0.20, step=0.01, format="%.4f",
-    help="The expected conversion rate of your control group."
+    min_value=0.0001,
+    max_value=0.9999,
+    value=0.20,
+    step=0.01,
+    format="%.4f",
+    help="The expected conversion rate of your control group.",
 )
 
 mde = st.sidebar.number_input(
     label="Minimum Detectable Effect (MDE)",
-    min_value=0.0001, value=0.02, step=0.001, format="%.4f",
-    help="The smallest absolute difference *vs control* you want to detect (e.g., 0.02 for a 2% increase)."
+    min_value=0.0001,
+    value=0.02,
+    step=0.001,
+    format="%.4f",
+    help="The smallest absolute difference *vs control* you want to detect (e.g., 0.02 for a 2% increase).",
 )
 
 alpha = st.sidebar.slider(
     label="Overall Significance Level (α)",
-    min_value=0.01, max_value=0.25, value=0.05, step=0.01, format="%.2f",
-    help="Desired overall probability of making at least one Type I error (false positive) across all comparisons. Typically 0.05."
+    min_value=0.01,
+    max_value=0.25,
+    value=0.05,
+    step=0.01,
+    format="%.2f",
+    help="Desired overall probability of making at least one Type I error (false positive) across all comparisons. Typically 0.05.",
 )
 
 power = st.sidebar.slider(
     label="Statistical Power (1-β)",
-    min_value=0.50, max_value=0.99, value=0.80, step=0.01, format="%.2f",
-    help="Desired probability of detecting the MDE *for a specific comparison* if it truly exists. Typically 0.80."
+    min_value=0.50,
+    max_value=0.99,
+    value=0.80,
+    step=0.01,
+    format="%.2f",
+    help="Desired probability of detecting the MDE *for a specific comparison* if it truly exists. Typically 0.80.",
 )
 
 alternative = st.sidebar.selectbox(
     label="Alternative Hypothesis",
-    options=['two-sided', 'larger', 'smaller'], index=0,
-    help="'two-sided': Test p_variant != p_control. 'larger': Test p_variant > p_control."
+    options=["two-sided", "larger", "smaller"],
+    index=0,
+    help="'two-sided': Test p_variant != p_control. 'larger': Test p_variant > p_control.",
 )
 
 # --- Calculate Button ---
@@ -173,29 +203,49 @@ if calculate_button:
         col1, col2 = st.columns(2)
         with col1:
             # Use comma for thousands separator
-            st.metric(label=f"Sample Size Per Group ({num_groups} Groups)", value=f"{sample_size_per_group:,}")
+            st.metric(
+                label=f"Sample Size Per Group ({num_groups} Groups)",
+                value=f"{sample_size_per_group:,}",
+            )
         with col2:
-            st.metric(label="Total Sample Size (All Groups)", value=f"{total_sample_size:,}")
+            st.metric(
+                label="Total Sample Size (All Groups)", value=f"{total_sample_size:,}"
+            )
 
         st.markdown("#### Calculation Inputs & Parameters:")
         # Use a DataFrame for slightly nicer display of parameters
         param_data = {
-            "Parameter": ["Baseline Rate (p1)", "Minimum Detectable Effect (MDE)", "Target Rate (p2)",
-                          "Overall Significance Level (Alpha)", "Adjusted Alpha per Comparison",
-                          "Statistical Power (1-Beta)", "Number of Groups", "Alternative Hypothesis"],
-            "Value": [f"{baseline_rate:.4f}", f"{mde:.4f}", f"{target_rate:.4f}",
-                      f"{alpha:.3f}", f"{adjusted_alpha:.5f}", f"{power:.2f}",
-                      num_groups, alternative]
+            "Parameter": [
+                "Baseline Rate (p1)",
+                "Minimum Detectable Effect (MDE)",
+                "Target Rate (p2)",
+                "Overall Significance Level (Alpha)",
+                "Adjusted Alpha per Comparison",
+                "Statistical Power (1-Beta)",
+                "Number of Groups",
+                "Alternative Hypothesis",
+            ],
+            "Value": [
+                f"{baseline_rate:.4f}",
+                f"{mde:.4f}",
+                f"{target_rate:.4f}",
+                f"{alpha:.3f}",
+                f"{adjusted_alpha:.5f}",
+                f"{power:.2f}",
+                num_groups,
+                alternative,
+            ],
         }
         st.dataframe(pd.DataFrame(param_data), hide_index=True)
 
-
-        st.info(f"""
+        st.info(
+            f"""
         **Note on Correction:** The calculation uses the Bonferroni correction by adjusting the significance level
         for each comparison against the control to **{adjusted_alpha:.5f}** (Overall Alpha / {num_groups-1} comparisons).
         This helps control the overall chance of a false positive but can be conservative (potentially requiring more samples than other methods).
-        """, icon="ℹ️")
-
+        """,
+            icon="ℹ️",
+        )
 
     except (ValueError, RuntimeError) as e:
         st.error(f"Error during calculation: {e}", icon="🚨")
@@ -257,4 +307,6 @@ with st.expander("ℹ️ Learn More About the Methodology"):
     """)
 
 st.divider()
-st.markdown("Built with [Streamlit](https://streamlit.io) | Uses [statsmodels](https://www.statsmodels.org/)")
+st.markdown(
+    "Built with [Streamlit](https://streamlit.io) | Uses [statsmodels](https://www.statsmodels.org/)"
+)
