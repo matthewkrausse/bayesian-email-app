@@ -98,6 +98,16 @@ st.markdown("""
 This app calculates the minimum sample size **per group** required for an A/B/.../N test
 comparing multiple variations against a control group. It uses the **Bonferroni correction**
 to control the overall false positive rate (Family-Wise Error Rate).
+            
+### How to Use:
+1. **Input Parameters**: Adjust the parameters in the sidebar to reflect your testing scenario.
+2. **Calculate**: Click the "Calculate Sample Size" button to get the required sample sizes.
+3. **Results**: The app will display the required sample sizes for each group and the adjusted significance level.
+            
+For example, if you have a control group and two variants (A/B/C test), set the number of groups to 3.
+If you are seeing open rates of 20% for the control and want to detect a 2% increase in the variant,
+set the baseline rate to 0.20 and the MDE to 0.02.
+    
 """)
 
 st.sidebar.header("Input Parameters")
